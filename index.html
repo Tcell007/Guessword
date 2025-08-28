@@ -1,164 +1,330 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>เกมทายศัพท์ | Input & Display</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Word Guessing — Input / Display</title>
   <style>
-    body { margin: 0; background: #0f172a; color: #e5e7eb; font-family: system-ui, -apple-system, "Noto Sans Thai", sans-serif; display: grid; place-items: start center; padding: 24px; }
-    .app { width: min(1100px, 95vw); }
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-    .tab-btn { padding: 10px 14px; border: 1px solid #334155; background: #1e293b; color: #e5e7eb; border-radius: 14px; cursor: pointer; }
-    .tab-btn[aria-selected="true"] { background: #0e1627; border-color: #22314a; }
-    .card { background: #111827; border: 1px solid #1f2937; border-radius: 18px; padding: 18px; }
-    textarea, input[type="text"], input[type="password"] { width: 100%; background: #0a0f1c; color: #e5e7eb; border: 1px solid #334155; border-radius: 12px; padding: 12px 14px; outline: none; font-size: 15px; }
-    .btn { padding: 10px 14px; border: 1px solid #243146; background: #1e293b; color: #e5e7eb; border-radius: 12px; cursor: pointer; }
-    .grid { display: flex; gap: 10px; flex-wrap: wrap; }
-    .group-block { border: 1px dashed #334155; border-radius: 14px; padding: 10px; margin-bottom: 12px; background: rgba(15,23,42,.35); }
-    .group-title { font-weight: bold; margin-bottom: 6px; }
-    .word-wrap { position: relative; display: inline-block; padding: 8px 12px; border: 1px dashed #334155; border-radius: 14px; margin: 4px; background: rgba(15,23,42,.35); }
-    .word { position: relative; z-index: 1; font-weight: 600; }
-    .cover { position: absolute; inset: 0; border-radius: 12px; opacity: .98; transition: opacity .35s ease; z-index: 2; }
-    .cover.revealed { opacity: 0; pointer-events: none; }
-    .badges { display: flex; flex-wrap: wrap; gap: 8px; }
-    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #1a2438; border: 1px solid #2a3a58; font-size: 14px; cursor: pointer; }
-    .hidden { display: none !important; }
-    .counters { margin-top: 10px; font-size: 14px; color: #9ca3af; }
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --accent-start:#d7e7ff;
+      --accent-end:#e6f7ff;
+      --pastel-1: #ffdede;
+      --pastel-2: #eaffde;
+      --pastel-3: #e8deff;
+      --shadow: 0 10px 20px rgba(20,30,80,0.06);
+      --radius:14px;
+      --tile-radius:10px;
+    }
+    *{box-sizing:border-box;font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#fbfbff);color:#1f2937}
+    .app{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .title{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent-start),var(--accent-end));display:flex;align-items:center;justify-content:center;font-weight:700;color:#08306b;box-shadow:var(--shadow)}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:#475569}
+    .tabs{display:flex;gap:8px}
+    .tab{padding:10px 16px;border-radius:10px;background:linear-gradient(90deg,rgba(255,255,255,0.6),rgba(255,255,255,0.4));border:1px solid rgba(0,0,0,0.04);cursor:pointer}
+    .tab.active{background:linear-gradient(90deg,#e6f7ff,#fff2e6);box-shadow:0 6px 18px rgba(30,60,120,0.06);font-weight:600}
+
+    .container{display:flex;gap:18px}
+    .left,.right{flex:1}
+    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+
+    /* Input form */
+    .groups{display:flex;flex-direction:column;gap:12px}
+    .group-row{display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:start}
+    .group-row input[type="text"], .group-row textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(15,23,42,0.06);resize:vertical}
+    .group-row textarea{min-height:64px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(90deg,#89f7fe,#66a6ff);color:#00303f;font-weight:600}
+    .btn.secondary{background:linear-gradient(90deg,#ffd9e8,#ffdca6);}
+    .controls{display:flex;gap:10px;align-items:center;margin-top:12px}
+
+    /* Lock overlay */
+    .locked{position:relative}
+    .lock-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,0.7),rgba(240,248,255,0.6));backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;border-radius:var(--radius)}
+    .lock-card{background:linear-gradient(135deg,#fff,#f8fbff);padding:18px;border-radius:12px;box-shadow:0 8px 24px rgba(10,20,50,0.06);text-align:center}
+
+    /* Display */
+    .group-card{padding:12px;border-radius:12px;background:linear-gradient(180deg,#fff,#fbfdff);border:1px solid rgba(10,20,40,0.03)}
+    .group-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .tiles{display:flex;flex-wrap:wrap;gap:10px}
+    .tile{position:relative;min-width:110px;padding:14px 12px;border-radius:var(--tile-radius);box-shadow:0 6px 14px rgba(20,30,80,0.04);display:flex;align-items:center;justify-content:center;font-weight:600;background:linear-gradient(180deg,#fff,#fcfdff);cursor:default}
+    .tile:hover{transform:translateY(-4px);transition:transform .18s}
+    .cover{position:absolute;inset:0;border-radius:var(--tile-radius);display:flex;align-items:center;justify-content:center;font-weight:700;color:rgba(255,255,255,0.9);font-size:18px}
+    .cover.p1{background:linear-gradient(135deg,var(--pastel-1),#ffdfe6)}
+    .cover.p2{background:linear-gradient(135deg,var(--pastel-2),#e6ffe6)}
+    .cover.p3{background:linear-gradient(135deg,var(--pastel-3),#efe6ff)}
+    .cover.hidden{pointer-events:none;animation:reveal .5s forwards}
+
+    @keyframes reveal{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.12)}}
+
+    .blink{animation:blink 1s ease-in-out 3;box-shadow:0 0 0 6px rgba(255,255,255,0.12) inset}
+    @keyframes blink{0%{box-shadow:0 0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 0 8px rgba(255,255,255,0.35)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+
+    .wrong-list{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
+    .wrong-item{padding:6px 10px;border-radius:999px;border:1px dashed rgba(30,40,60,0.08);cursor:pointer}
+
+    .stats{margin-top:10px;color:#334155;font-weight:600}
+
+    /* small */
+    .muted{color:#6b7280;font-size:13px}
+    .small{font-size:13px}
+
+    /* responsive */
+    @media(max-width:900px){.container{flex-direction:column}.group-row{grid-template-columns:1fr} }
+
   </style>
 </head>
 <body>
   <div class="app">
-    <div class="tabs">
-      <button class="tab-btn" id="tab-input" aria-selected="true">Input</button>
-      <button class="tab-btn" id="tab-display" aria-selected="false">Display</button>
+    <header>
+      <div class="title">
+        <div class="logo">WG</div>
+        <div>
+          <h1>Word Guessing — Input & Display</h1>
+          <p class="lead muted">สร้างกลุ่มคำ แล้วให้ผู้เล่นพิมพ์คำเพื่อเปิดป้าย</p>
+        </div>
+      </div>
+      <div class="tabs" role="tablist">
+        <div id="tab-input" class="tab active">Input</div>
+        <div id="tab-display" class="tab">Display</div>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="left">
+        <div id="inputCard" class="card locked">
+          <h3>ตั้งชื่อกลุ่ม และใส่คำศัพท์ (บรรทัดละคำ)</h3>
+          <div style="margin-top:10px" class="muted small">สร้างหลายกลุ่มได้ — แต่ละกลุ่มจะเป็นบล็อกแยกกันเมื่อแสดงผล</div>
+          <div style="height:12px"></div>
+
+          <div class="groups" id="groupsContainer">
+            <!-- dynamic group rows -->
+          </div>
+
+          <div class="controls">
+            <button id="addGroupBtn" class="btn secondary">+ เพิ่มกลุ่ม</button>
+            <button id="createBtn" class="btn">สร้างกล่องคำ</button>
+            <div style="flex:1"></div>
+            <div class="muted small">สถานะ: <span id="inputState">Ready</span></div>
+          </div>
+
+          <!-- lock overlay (activated after create) -->
+          <div id="lockOverlay" class="lock-overlay" style="display:none">
+            <div class="lock-card">
+              <div style="font-weight:700;margin-bottom:6px">Input ถูกล็อก</div>
+              <div class="muted small">ถ้าต้องการแก้ไขอีกครั้ง คลิก "ปลดล็อก" แล้วยืนยัน</div>
+              <div style="height:10px"></div>
+              <button id="unlockBtn" class="btn">ปลดล็อก</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="card">
+          <h3>Display</h3>
+          <div class="muted small">พิมพ์คำเพื่อทายคำในกลุ่ม (ไม่สนตัวพิมพ์ใหญ่/เล็ก)</div>
+          <div style="height:12px"></div>
+
+          <div style="display:flex;gap:8px;align-items:center}">
+            <input id="guessInput" type="text" placeholder="พิมพ์คำที่จะทาย แล้วกด Check หรือ Enter" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(10,20,40,0.06)" />
+            <button id="checkBtn" class="btn">Check</button>
+          </div>
+
+          <div id="stats" class="stats"></div>
+
+          <div id="groupsDisplay" style="margin-top:12px;display:flex;flex-direction:column;gap:12px"></div>
+
+        </div>
+      </div>
     </div>
-
-    <section id="panel-input" class="card">
-      <h3>ป้อนคำศัพท์</h3>
-      <p>พิมพ์คำในแต่ละบรรทัด โดยบรรทัดหนึ่งถือเป็น <b>หนึ่งกลุ่ม</b> คำภายในกลุ่มคั่นด้วยคอมมา(,)</p>
-      <textarea id="input-words" rows="8" placeholder="เช่น: apple, sky, mango\ntrain, river, cloud"></textarea>
-      <div style="margin-top: 10px; text-align: right;">
-        <button id="btn-generate" class="btn">สร้างกล่องคำ</button>
-      </div>
-    </section>
-
-    <section id="panel-display" class="card hidden">
-      <h3>ป้ายกลุ่มคำศัพท์</h3>
-      <div id="words-container"></div>
-      <div class="counters">เปิดแล้ว: <span id="opened-count">0</span> / <span id="total-count">0</span></div>
-      <div style="margin: 12px 0;">
-        <input id="guess-input" type="text" placeholder="พิมพ์คำเพื่อทาย" />
-        <button id="btn-check" class="btn">Check</button>
-        <button id="btn-reveal-all" class="btn">Reveal All</button>
-        <button id="btn-reset" class="btn">Reset Cover</button>
-      </div>
-      <h4>คำที่ไม่อยู่ในป้าย (คลิกลบได้)</h4>
-      <div id="wrong-list" class="badges"></div>
-    </section>
-
-    <section id="panel-pass" class="card hidden">
-      <h3>ใส่รหัสเพื่อเข้าถึง Input : no</h3>
-      <input id="pass-input" type="password" placeholder="Enter password" />
-      <div style="margin-top:10px; text-align:right;">
-        <button id="btn-pass" class="btn">Unlock</button>
-      </div>
-    </section>
   </div>
 
   <script>
-    const state = { groups: [], normWords: new Set(), revealed: new Set(), locked:true, password:"no" };
+    // State
+    let groups = [];
+    let locked = false;
 
-    function normalize(str){ return (str||"").trim().toLowerCase(); }
-    function parseGroups(text){
-      const lines=text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
-      return lines.map(line=>line.split(/[,]+/).map(w=>w.trim()).filter(Boolean));
+    const groupsContainer = document.getElementById('groupsContainer');
+    const groupsDisplay = document.getElementById('groupsDisplay');
+    const addGroupBtn = document.getElementById('addGroupBtn');
+    const createBtn = document.getElementById('createBtn');
+    const lockOverlay = document.getElementById('lockOverlay');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const inputState = document.getElementById('inputState');
+
+    const tabInput = document.getElementById('tab-input');
+    const tabDisplay = document.getElementById('tab-display');
+    const inputCard = document.getElementById('inputCard');
+
+    const guessInput = document.getElementById('guessInput');
+    const checkBtn = document.getElementById('checkBtn');
+    const stats = document.getElementById('stats');
+
+    function makeGroupRow(group = {name:'', words:[]}){
+      const id = Math.random().toString(36).slice(2,9);
+      const div = document.createElement('div');
+      div.className='group-row';
+      div.dataset.id = id;
+
+      const nameInput = document.createElement('input');
+      nameInput.type='text'; nameInput.placeholder='ชื่อกลุ่ม (เช่น กลุ่ม A)'; nameInput.value = group.name;
+
+      const ta = document.createElement('textarea');
+      ta.placeholder='พิมพ์คำแต่ละคำในบรรทัดใหม่ เช่น:\napple\nbanana\ncherry';
+      ta.value = (group.words||[]).join('\n');
+
+      const del = document.createElement('button');
+      del.className='btn'; del.textContent='ลบ';
+      del.onclick = ()=>{ groupsContainer.removeChild(div); }
+
+      div.appendChild(nameInput); div.appendChild(ta); div.appendChild(del);
+      groupsContainer.appendChild(div);
+      return {id,nameInput,ta,el:div};
     }
-    function pastel(){
-      const h=Math.floor(Math.random()*360);
-      const s=70+Math.floor(Math.random()*20);
-      const l=75+Math.floor(Math.random()*10);
-      return `hsl(${h} ${s}% ${l}%)`;
+
+    // Initially add two groups
+    makeGroupRow({name:'กลุ่ม 1', words:['apple','banana']});
+
+    addGroupBtn.onclick = ()=>{ makeGroupRow({name:'กลุ่ม ใหม่', words:[]}); }
+
+    function readInputGroups(){
+      groups = [];
+      Array.from(groupsContainer.children).forEach(r=>{
+        const name = r.querySelector('input').value.trim() || 'ไม่ระบุ';
+        const raw = r.querySelector('textarea').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        const words = raw.map(w=>w);
+        groups.push({name, words, revealed: new Array(words.length).fill(false), wrong: []});
+      });
     }
 
-    const tabInput=document.getElementById('tab-input');
-    const tabDisplay=document.getElementById('tab-display');
-    const panelInput=document.getElementById('panel-input');
-    const panelDisplay=document.getElementById('panel-display');
-    const panelPass=document.getElementById('panel-pass');
+    createBtn.onclick = ()=>{
+      readInputGroups();
+      if(groups.length===0){alert('กรุณาเพิ่มกลุ่มคำอย่างน้อย 1 กลุ่ม');return}
+      // lock input
+      locked = true;
+      lockOverlay.style.display='flex';
+      inputState.textContent = 'Locked';
+      renderDisplay();
+      // Switch to Display tab
+      activateTab('display');
+    }
 
-    function setTab(which){
+    unlockBtn.onclick = ()=>{
+      if(!confirm('ต้องการปลดล็อก Input เพื่อแก้ไขหรือไม่?')) return;
+      locked = false; lockOverlay.style.display='none'; inputState.textContent='Ready';
+    }
+
+    function activateTab(which){
       if(which==='input'){
-        if(state.locked){
-          tabInput.setAttribute('aria-selected',true);
-          tabDisplay.setAttribute('aria-selected',false);
-          panelInput.classList.add('hidden');
-          panelDisplay.classList.add('hidden');
-          panelPass.classList.remove('hidden');
-          return;
-        }
-        tabInput.setAttribute('aria-selected',true);
-        tabDisplay.setAttribute('aria-selected',false);
-        panelInput.classList.remove('hidden');
-        panelDisplay.classList.add('hidden');
-        panelPass.classList.add('hidden');
-      } else {
-        tabInput.setAttribute('aria-selected',false);
-        tabDisplay.setAttribute('aria-selected',true);
-        panelInput.classList.add('hidden');
-        panelDisplay.classList.remove('hidden');
-        panelPass.classList.add('hidden');
+        tabInput.classList.add('active'); tabDisplay.classList.remove('active');
+        inputCard.style.display='block';
+      }else{
+        tabDisplay.classList.add('active'); tabInput.classList.remove('active');
+        inputCard.style.display='block';
       }
     }
 
-    tabInput.onclick=()=>setTab('input');
-    tabDisplay.onclick=()=>setTab('display');
+    tabInput.onclick = ()=>{ if(locked){ alert('Input ถูกล็อกอยู่ — หากต้องการแก้ไข ให้ไปกด "ปลดล็อก" ที่ Input'); } else { tabInput.classList.add('active'); tabDisplay.classList.remove('active'); } }
+    tabDisplay.onclick = ()=>{ tabDisplay.classList.add('active'); tabInput.classList.remove('active'); }
 
-    const inputArea=document.getElementById('input-words');
-    const btnGenerate=document.getElementById('btn-generate');
-    const wordsContainer=document.getElementById('words-container');
-    const wrongList=document.getElementById('wrong-list');
-    const openedCount=document.getElementById('opened-count');
-    const totalCount=document.getElementById('total-count');
+    // Rendering Display
+    function renderDisplay(){
+      groupsDisplay.innerHTML='';
+      let total = 0, opened=0;
+      groups.forEach((g,gi)=>{
+        const card = document.createElement('div'); card.className='group-card';
+        const title = document.createElement('div'); title.className='group-title';
+        const left = document.createElement('div'); left.innerHTML = `<strong>${g.name}</strong><div class="muted small">${g.words.length} คำ</div>`;
+        const right = document.createElement('div'); right.className='muted small';
+        title.appendChild(left); title.appendChild(right);
+        card.appendChild(title);
 
-    function buildDisplay(){
-      wordsContainer.innerHTML=''; wrongList.innerHTML=''; state.normWords.clear(); state.revealed.clear();
-      state.groups.forEach((group,gi)=>{
-        const block=document.createElement('div'); block.className='group-block';
-        const title=document.createElement('div'); title.className='group-title'; title.textContent=`คำศัพท์กลุ่ม ${gi+1}`;
-        block.appendChild(title);
-        group.forEach(word=>{
-          const wrap=document.createElement('div'); wrap.className='word-wrap';
-          const t=document.createElement('span'); t.className='word'; t.textContent=word;
-          const cover=document.createElement('span'); cover.className='cover'; cover.dataset.word=normalize(word); cover.style.background=pastel();
-          wrap.appendChild(t); wrap.appendChild(cover); block.appendChild(wrap);
-          state.normWords.add(normalize(word));
+        const tilesWrap = document.createElement('div'); tilesWrap.className='tiles';
+
+        g.words.forEach((w,wi)=>{
+          total++;
+          const tile = document.createElement('div'); tile.className='tile'; tile.dataset.group=gi; tile.dataset.index=wi;
+          const txt = document.createElement('div'); txt.textContent = w; tile.appendChild(txt);
+
+          const cover = document.createElement('div'); cover.className='cover ' + (['p1','p2','p3'][wi%3]); cover.textContent = '?';
+          if(g.revealed[wi]){ cover.classList.add('hidden'); }
+          tile.appendChild(cover);
+          tilesWrap.appendChild(tile);
+          if(g.revealed[wi]) opened++;
         });
-        wordsContainer.appendChild(block);
+
+        card.appendChild(tilesWrap);
+
+        // wrong list
+        const wrongList = document.createElement('div'); wrongList.className='wrong-list';
+        (g.wrong||[]).forEach((wrd,idx)=>{
+          const wi = document.createElement('div'); wi.className='wrong-item'; wi.textContent=wrd; wi.onclick = ()=>{ g.wrong.splice(idx,1); renderDisplay(); };
+          wrongList.appendChild(wi);
+        });
+        card.appendChild(wrongList);
+
+        // stats update
+        const rcount = g.revealed.filter(Boolean).length;
+        right.innerHTML = `<span class="small">เปิดแล้ว ${rcount} / ${g.words.length}</span>`;
+
+        groupsDisplay.appendChild(card);
       });
-      totalCount.textContent=state.normWords.size; openedCount.textContent=0;
+
+      stats.innerHTML = `รวม: เปิดแล้ว <strong>${opened}</strong> / รวม <strong>${total}</strong> คำ`;
     }
 
-    btnGenerate.onclick=()=>{ state.groups=parseGroups(inputArea.value); buildDisplay(); state.locked=true; setTab('display'); };
+    function matchGuess(guess){
+      if(!guess) return;
+      const gLower = guess.trim().toLowerCase();
+      let found = false;
+      groups.forEach((g,gi)=>{
+        g.words.forEach((w,wi)=>{
+          if(!g.revealed[wi] && w.toLowerCase()===gLower){
+            // reveal
+            g.revealed[wi]=true; found=true;
+            // show animation: add hidden class to cover, blink tile
+            // we'll re-render and then trigger blink on the tile element
+          }
+        });
+      });
 
-    const guessInput=document.getElementById('guess-input');
-    document.getElementById('btn-check').onclick=()=>{
-      const raw=guessInput.value; const norm=normalize(raw); if(!norm) return;
-      let found=false;
-      document.querySelectorAll('.cover:not(.revealed)').forEach(el=>{ if(el.dataset.word===norm){ el.classList.add('revealed'); state.revealed.add(norm); found=true; }});
-      if(found) openedCount.textContent=state.revealed.size; else addWrongBadge(raw.trim());
-      guessInput.value='';
-    };
-    function addWrongBadge(text){ const b=document.createElement('span'); b.className='badge'; b.textContent=text; b.onclick=()=>b.remove(); wrongList.appendChild(b); }
-    document.getElementById('btn-reveal-all').onclick=()=>{ document.querySelectorAll('.cover').forEach(el=>el.classList.add('revealed')); state.revealed=new Set(state.normWords); openedCount.textContent=state.revealed.size; };
-    document.getElementById('btn-reset').onclick=()=>{ document.querySelectorAll('.cover').forEach(el=>el.classList.remove('revealed')); state.revealed.clear(); wrongList.innerHTML=''; openedCount.textContent=0; };
+      if(found){
+        renderDisplay();
+        // find tile elements that were revealed this turn and add blink
+        setTimeout(()=>{
+          document.querySelectorAll('.tile').forEach(t=>{
+            const gi = +t.dataset.group, wi = +t.dataset.index;
+            if(groups[gi] && groups[gi].revealed[wi]){
+              t.classList.add('blink');
+              setTimeout(()=>t.classList.remove('blink'), 1500);
+            }
+          });
+        },50);
+      } else {
+        // add to wrong lists for all groups? instruction: "ให้แสดงผลข้อความนั้นในบรรทัดต่อมาจากกลุ่มคำหลัก" - so add under each group as suggestion to allow clicking to remove
+        // We'll add it to the first group that doesn't already have the wrong item
+        if(groups.length===0) return;
+        // choose group by simple round-robin: push into groups[0]
+        const target = groups[0];
+        if(!target.wrong.includes(guess)) target.wrong.push(guess);
+        renderDisplay();
+      }
+    }
 
-    document.getElementById('btn-pass').onclick=()=>{
-      const val=document.getElementById('pass-input').value;
-      if(val===state.password){ state.locked=false; setTab('input'); }
-      else alert('รหัสไม่ถูกต้อง');
-    };
+    checkBtn.onclick = ()=>{ const val = guessInput.value.trim(); if(!val) return; matchGuess(val); guessInput.value=''; guessInput.focus(); }
+    guessInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); checkBtn.click(); } });
 
-    inputArea.value="apple, Banana, mango\ntrain, River, cloud\nSky, ocean";
+    // initial render
+    renderDisplay();
+
+    // small helper: if user unlocks, let them edit; when they re-create, re-lock
+    // Save/Restore not implemented — everything in-memory
+
   </script>
 </body>
 </html>
